@@ -5,10 +5,15 @@ import Polynetwork BoolUtils
 library ZilCrossChainManager
 
 let nullAddress = 0x0000000000000000000000000000000000000000
+
 let one_msg =
   fun (msg : Message) =>
     let nil_msg = Nil {Message} in
     Cons {Message} msg nil_msg
+
+let bool_active = True
+let bool_inactive = False
+
 
 type Error =
   | ContractFrozenFailure
@@ -24,6 +29,10 @@ type Error =
   | WrongTransaction
   | TransactionAlreadyExecuted
   | TransactionHashInvalid
+  | AdminValidationFailed
+  | ProxyValidationFailed
+  | StagingAdminValidationFailed
+  | StagingAdminNotExist
 
 let make_error =
   fun (result: Error) =>
@@ -42,15 +51,21 @@ let make_error =
       | WrongTransaction => Int32 -11
       | TransactionAlreadyExecuted => Int32 -12
       | TransactionHashInvalid => Int32 -13
+      | AdminValidationFailed => Int32 -14
+      | ProxyValidationFailed => Int32 -15
+      | StagingAdminValidationFailed => Int32 -16
+      | StagingAdminNotExist => Int32 -17
       end
     in
     { _exception: "Error"; code: result_code }
 (***************************************************)
 (*             The contract definition             *)
 (***************************************************)
-contract ZilCrossChainManager
-(thisChainID : Uint64)
-
+contract ZilCrossChainManager(
+  this_chain_id : Uint64,
+  init_proxy_address: ByStr20,
+  init_admin: ByStr20
+)
 
 field paused: Bool = True
 (* When Poly chain switches the consensus epoch book keepers, *)
@@ -71,11 +86,25 @@ field zilToPolyTxHashMap: Map Uint256 ByStr32 = Emp Uint256 ByStr32
 field zilToPolyTxHashIndex: Uint256 = Uint256 0
 (* Record the from chain txs that have been processed *)
 field fromChainTxExist : Map Uint64 (Map ByStr32 Unit) = Emp Uint64 (Map ByStr32 Unit)
+field contractadmin: ByStr20  = init_admin
+field stagingcontractadmin: Option ByStr20 = None {ByStr20}
 
+
+(* Procedures *)
 
 procedure ThrowError(err: Error)
   e = make_error err;
   throw e
+end
+
+procedure IsProxy()
+  is_proxy = builtin eq _sender init_proxy_address;
+  match is_proxy with
+  | True  =>
+  | False =>
+    e = ProxyValidationFailed;
+    ThrowError e
+  end
 end
 
 procedure IsNotPaused()
@@ -88,27 +117,38 @@ procedure IsNotPaused()
   end
 end
 
+procedure IsAdmin(initiator: ByStr20)
+  contractadmin_tmp <- contractadmin;
+  is_admin = builtin eq initiator contractadmin_tmp;
+  match is_admin with
+  | True  =>
+  | False =>
+    e = AdminValidationFailed;
+    ThrowError e
+  end
+end
+
 procedure verifyPubkeysAndUpdate(pubkeys: List Pubkey, h_nextBookkeeper: ByStr20, h_height: Uint32)
-      nextbookkeeper_keepers = verifyPubkey pubkeys;
-      match nextbookkeeper_keepers with
-      | Pair nextBookKeeper keepers =>
-        (* Ensure that Header's nextBookKeeper is same as the one from verifyPubkey *)
-        nbk_eq = builtin eq nextBookKeeper h_nextBookkeeper;
-        match nbk_eq with
-        | True =>
-          curEpochStartHeight := h_height;
-          conKeepersPublicKeyList := keepers
-        | False =>
-          e = NextBookersIllegal;
-          ThrowError e
-        end
+  nextbookkeeper_keepers = verifyPubkey pubkeys;
+    match nextbookkeeper_keepers with
+    | Pair nextBookKeeper keepers =>
+      (* Ensure that Header's nextBookKeeper is same as the one from verifyPubkey *)
+      nbk_eq = builtin eq nextBookKeeper h_nextBookkeeper;
+      match nbk_eq with
+      | True =>
+        curEpochStartHeight := h_height;
+        conKeepersPublicKeyList := keepers
+      | False =>
+        e = NextBookersIllegal;
+        ThrowError e
       end
+    end
 end
 
 procedure executeCrossChainTxn (txparam: TxParam, fromChainId: Uint64, crossChainTxHash: ByStr)
   match txparam with
   | TxParam txHash crossChainID fromContract toChainID toContract method args =>
-    toChainIDOk = builtin eq toChainID thisChainID;
+    toChainIDOk = builtin eq toChainID this_chain_id;
     match toChainIDOk with
     | True =>
       toContractAddr_o = builtin to_bystr20 toContract;
@@ -165,11 +205,75 @@ procedure checkAndMarkFromChainTxn(chainID : Uint64, txHash : ByStr)
   end
 end
 
+(***************************************************)
+(*                  Transition                     *)
+(***************************************************)
+
+(***************************************************)
+(*            House keeping transition             *)
+(***************************************************)
+
+(* @dev: Start a proposal for new contract admin. Used by admin only. *)
+(* @param admin: New admin value *)
+(* @param initiator: The original caller who called the proxy. *)
+transition UpdateAdmin(newAdmin: ByStr20, initiator: ByStr20)
+  IsProxy;
+  IsAdmin initiator;
+  staging_admin = Some {ByStr20} newAdmin;
+  stagingcontractadmin := staging_admin
+end
+
+(* @dev: Claim to be the new admin of contract. *)
+(* @param initiator: The original caller who called the proxy. *)
+transition ClaimAdmin(initiator: ByStr20)
+  IsProxy;
+  staging_admin <- stagingcontractadmin;
+  match staging_admin with
+  | Some admin =>
+    is_valid = builtin eq initiator admin;
+    match is_valid with
+    | True =>
+      contractadmin := admin;
+      staging_admin = None {ByStr20};
+      stagingcontractadmin := staging_admin;
+      e = { _eventname: "ClaimAdmin"; new_admin: admin };
+      event e
+    | False =>
+      e = StagingAdminValidationFailed;
+      ThrowError e
+    end
+  | None =>
+    e = StagingAdminNotExist;
+    ThrowError e
+  end
+end
+
+(* @dev: pause the contract. Used by admin only.               *)
+(* @param initiator: The original caller who called the proxy. *)
+transition Pause(initiator: ByStr20)
+  IsProxy;
+  IsAdmin initiator;
+  paused := bool_active
+end
+
+(* @dev: unpause/unfreeze the contract. Used by admin only.    *)
+(* @param initiator: The original caller who called the proxy. *)
+transition UnPause(initiator: ByStr20)
+  IsProxy;
+  IsAdmin initiator;
+  paused := bool_inactive
+end
+
+(***************************************************)
+(*             Cross chain transition              *)
+(***************************************************)
+
 (* @dev:  sync Poly chain genesis block header to smart contrat. *)
-(* @param rawHeader: Poly chain genesis block raw header or raw *)
-(*        Header including switching consensus peers info       *)
-(* @param pubkeys:  Poly chain consensus nodes public key list. *)
+(* @param rawHeader: Poly chain genesis block raw header or raw  *)
+(*        Header including switching consensus peers info        *)
+(* @param pubkeys:  Poly chain consensus nodes public key list.  *)
 transition InitGenesisBlock(rawHeader: ByStr, pubkeys: List Pubkey)
+  IsProxy;
   IsNotPaused;
   current_keepers_o <- conKeepersPublicKeyList;
   match current_keepers_o with
@@ -202,6 +306,7 @@ end
 (* @param pubkeys:  Poly chain consensus nodes public key list. *)
 (* @param sigList:  Poly chain consensus nodes signature list.  *)
 transition ChangeBookKeeper(rawHeader: ByStr, pubkeys: List Pubkey, sigList: List Signature)
+  IsProxy;
   IsNotPaused;
   header_o = deserialize_Header rawHeader zero_uint32;
   curStartHeight <- curEpochStartHeight;
@@ -248,6 +353,7 @@ end
 (* @param method:  Method to call target smart contract                              *)
 (* @param txData: Transaction data for target chain, include to_address, amount.     *)
 transition CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr)
+  IsProxy;
   IsNotPaused;
   txHashIndex <- zilToPolyTxHashIndex;
   paramTxHash = let b = builtin to_bystr32 txHashIndex in builtin to_bystr b;
@@ -283,6 +389,8 @@ end
 (* @param headerSig: The coverted signature veriable for solidity derived from Poly chain      *)
 (*                   consensus nodes signature  used to verify the validity of curRawHeader    *)
 transition VerifyHeaderAndExecuteTx(proof: Proof, rawHeader: ByStr, headerProof: Proof, curRawHeader: ByStr, headerSig: List Signature)
+  IsProxy;
+  IsNotPaused;
   header_o = deserialize_Header rawHeader zero_uint32;
   curKeepers <- conKeepersPublicKeyList;
   curStartHeight <- curEpochStartHeight;
