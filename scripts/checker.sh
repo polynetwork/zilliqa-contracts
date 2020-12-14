@@ -1,0 +1,1 @@
+./bin/scilla-checker -gaslimit 10000 -libdir src/stdlib /home/xiaohuo/zilliqa/zilliqa-contracts/ZilCrossChainManager.scilla
