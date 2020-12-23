@@ -60,9 +60,34 @@ func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (st
 	pubKey := keytools.GetPublicKeyFromPrivateKey(util.DecodeHex(d.PrivateKey), true)
 	address := keytools.GetAddressFromPublic(pubKey)
 
-	// deploy cross chain manager
-	code, _ := ioutil.ReadFile(d.ImplPath)
+	// deploy proxy
+	code, _ := ioutil.ReadFile(d.ProxyPath)
 	init := []core.ContractValue{
+		{
+			"_scilla_version",
+			"Uint32",
+			"0",
+		},
+		{
+			"init_crosschain_manager",
+			"ByStr20",
+			"0x0000000000000000000000000000000000000000",
+		},
+		{
+			"init_admin",
+			"ByStr20",
+			"0x" + address,
+		},
+	}
+
+	proxy, err1 := d.deploy(code, init, wallet, client, pubKey, address)
+	if err1 != nil {
+		return "", "", err1
+	}
+
+	// deploy cross chain manager
+	code, _ = ioutil.ReadFile(d.ImplPath)
+	init = []core.ContractValue{
 		{
 			"_scilla_version",
 			"Uint32",
@@ -76,7 +101,7 @@ func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (st
 		{
 			"init_proxy_address",
 			"ByStr20",
-			"0x0000000000000000000000000000000000000000",
+			"0x" + proxy,
 		},
 		{
 			"init_admin",
@@ -88,30 +113,6 @@ func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (st
 	impl, err := d.deploy(code, init, wallet, client, pubKey, address)
 	if err != nil {
 		return "", "", err
-	}
-
-	// deploy proxy
-	code, _ = ioutil.ReadFile(d.ProxyPath)
-	init = []core.ContractValue{
-		{
-			"_scilla_version",
-			"Uint32",
-			"0",
-		},
-		{
-			"init_crosschain_manager",
-			"ByStr20",
-			"0x" + impl,
-		},
-		{
-			"init_admin",
-			"ByStr20",
-			"0x" + address,
-		},
-	}
-	proxy, err1 := d.deploy(code, init, wallet, client, pubKey, address)
-	if err1 != nil {
-		return "", "", err1
 	}
 
 	return proxy, impl, nil

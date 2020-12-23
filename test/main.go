@@ -33,4 +33,9 @@ func main() {
 		log.Fatalln(err1.Error())
 	}
 
+	err2 := p.Unpause()
+	if err2 != nil {
+		log.Fatalln(err2.Error())
+	}
+
 }
