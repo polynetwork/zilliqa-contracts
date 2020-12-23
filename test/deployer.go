@@ -56,10 +56,7 @@ func (d *Deployer) deploy(contractCode []byte, init []core.ContractValue, wallet
 	}
 }
 
-func (d *Deployer) Deploy() (string, string, error) {
-	wallet := account.NewWallet()
-	wallet.AddByPrivateKey(d.PrivateKey)
-	client := provider.NewProvider(d.Host)
+func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (string, string, error) {
 	pubKey := keytools.GetPublicKeyFromPrivateKey(util.DecodeHex(d.PrivateKey), true)
 	address := keytools.GetAddressFromPublic(pubKey)
 

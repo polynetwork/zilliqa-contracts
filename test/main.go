@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"github.com/Zilliqa/gozilliqa-sdk/account"
+	"github.com/Zilliqa/gozilliqa-sdk/provider"
 	"log"
 )
 
@@ -12,13 +13,24 @@ func main() {
 		ProxyPath:  "../contracts/ZilCrossChainManagerProxy.scilla",
 		ImplPath:   "../contracts/ZilCrossChainManager.scilla",
 	}
-
-	proxy, impl, err := deployer.Deploy()
+	wallet := account.NewWallet()
+	wallet.AddByPrivateKey(deployer.PrivateKey)
+	client := provider.NewProvider(deployer.Host)
+	proxy, impl, err := deployer.Deploy(wallet, client)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
 
-	fmt.Println("proxy = ", proxy)
-	fmt.Println("impl = ", impl)
+	p := &Proxy{
+		ProxyAddr: proxy,
+		ImplAddr:  impl,
+		Wallet:    wallet,
+		Client:    client,
+	}
+
+	err1 := p.UpgradeTo()
+	if err1 != nil {
+		log.Fatalln(err1.Error())
+	}
 
 }
