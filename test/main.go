@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/Zilliqa/gozilliqa-sdk/account"
+	"github.com/Zilliqa/gozilliqa-sdk/crosschain/polynetwork"
 	"github.com/Zilliqa/gozilliqa-sdk/provider"
 	"log"
 )
@@ -21,11 +22,13 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 
-	p := &Proxy{
-		ProxyAddr: proxy,
-		ImplAddr:  impl,
-		Wallet:    wallet,
-		Client:    client,
+	p := &polynetwork.Proxy{
+		ProxyAddr:  proxy,
+		ImplAddr:   impl,
+		Wallet:     wallet,
+		Client:     client,
+		ChainId:    222,
+		MsgVersion: 1,
 	}
 
 	err1 := p.UpgradeTo()
@@ -37,5 +40,8 @@ func main() {
 	if err2 != nil {
 		log.Fatalln(err2.Error())
 	}
+
+	tester := &Tester{p: p}
+	tester.InitGenesisBlock()
 
 }
