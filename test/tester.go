@@ -15,7 +15,7 @@ func (t *Tester) InitGenesisBlock() {
 
 	publicKeys, _ := polynetwork.SplitPubKeys(genesisPubKey)
 
-	err := t.p.InitGenesisBlock(genesisHeader, publicKeys)
+	_, err := t.p.InitGenesisBlock(genesisHeader, publicKeys)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}

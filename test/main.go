@@ -31,12 +31,12 @@ func main() {
 		MsgVersion: 1,
 	}
 
-	err1 := p.UpgradeTo()
+	_, err1 := p.UpgradeTo()
 	if err1 != nil {
 		log.Fatalln(err1.Error())
 	}
 
-	err2 := p.Unpause()
+	_, err2 := p.Unpause()
 	if err2 != nil {
 		log.Fatalln(err2.Error())
 	}
