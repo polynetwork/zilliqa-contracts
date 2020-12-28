@@ -96,7 +96,7 @@ func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (st
 		{
 			"this_chain_id",
 			"Uint64",
-			"1",
+			"2",
 		},
 		{
 			"init_proxy_address",

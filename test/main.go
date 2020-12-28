@@ -43,5 +43,7 @@ func main() {
 
 	tester := &Tester{p: p}
 	tester.InitGenesisBlock()
+	//tester.ChangeBookKeeper()
+	tester.VerifierHeaderAndExecuteTx()
 
 }
