@@ -1,0 +1,45 @@
+scilla_version 0
+
+library LockProxy
+
+type Error = 
+  | AdminValidationFailed
+
+let make_error =
+  fun (result: Error) =>
+    let result_code =
+      match result with
+      | AdminValidationFailed => Int32 -1
+      end
+    in
+    { _exception: "Error"; code: result_code }  
+
+(***************************************************)
+(*             The contract definition             *)
+(***************************************************)
+contract LockProxy(
+  init_admin: ByStr20,
+  init_manager_proxy: ByStr20
+)
+
+field contractadmin: ByStr20  = init_admin
+field asset_map: Map ByStr20 (Map Uint64 ByStr) = Emp ByStr20 (Map Uint64 ByStr)
+
+(* Procedures *)
+
+procedure ThrowError(err: Error)
+  e = make_error err;
+  throw e
+end
+
+procedure IsAdmin(initiator: ByStr20)
+  contractadmin_tmp <- contractadmin;
+  is_admin = builtin eq initiator contractadmin_tmp;
+  match is_admin with
+  | True  =>
+  | False =>
+    e = AdminValidationFailed;
+    ThrowError e
+  end
+end
+
