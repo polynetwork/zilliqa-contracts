@@ -4,15 +4,19 @@ library LockProxy
 
 type Error = 
   | AdminValidationFailed
+  | AmountCannotBeZero
 
 let make_error =
   fun (result: Error) =>
     let result_code =
       match result with
       | AdminValidationFailed => Int32 -1
+      | AmountCannotBeZero => Int32 -2
       end
     in
-    { _exception: "Error"; code: result_code }  
+    { _exception: "Error"; code: result_code }
+
+let zero_amount = Uint256 0
 
 (***************************************************)
 (*             The contract definition             *)
@@ -26,7 +30,6 @@ field contractadmin: ByStr20  = init_admin
 field asset_map: Map ByStr20 (Map Uint64 ByStr) = Emp ByStr20 (Map Uint64 ByStr)
 
 (* Procedures *)
-
 procedure ThrowError(err: Error)
   e = make_error err;
   throw e
@@ -42,4 +45,38 @@ procedure IsAdmin(initiator: ByStr20)
     ThrowError e
   end
 end
+
+(* lock amount should not be zero *)
+procedure ValidateAmount(amount: Uint256)
+  is_zero = builtin eq amount zero_amount;
+  match is_zero with
+  | True =>
+    e =  AmountCannotBeZero;
+    ThrowError e
+  | False =>
+  end
+end
+
+(* transfer asset from fromAddress to LockProxy contract *)
+procedure TransferToContract(fromAssetHash: ByStr20, amount: Uint256)
+(* statements go below *)
+  
+end
+
+
+
+
+(* This function is meant to be invoked by the user *)
+(* a certin amount teokens will be locked in the proxy contract the invoker/msg.sender immediately.*)
+(* Then the same amount of tokens will be unloked from target chain proxy contract at the target chain with chainId later. *)
+(* @param fromAssetHash: The asset address in current chain, uniformly named as `fromAssetHash` *)
+(* @param toChainId:  The target chain id *)
+(* @param toAddress:  The address in bytes format to receive same amount of tokens in target chain  *)
+(* @param amount:   The amount of tokens to be crossed from ethereum to the chain with chainId  *)
+transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr20, amount: Uint256)
+  ValidateAmount amount;
+  e = { _eventname: "Lock" };
+  event e
+end
+
 
