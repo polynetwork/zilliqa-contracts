@@ -14,6 +14,7 @@ type Error =
   | LockAmountMismatch
   | IllegalToAssetHash
   | IllegalToAmount
+  | IllegalTargetProxy
 
 let make_error =
   fun (result: Error) =>
@@ -24,6 +25,7 @@ let make_error =
       | LockAmountMismatch => Int32 -3
       | IllegalToAssetHash => Int32 -4
       | IllegalToAmount => Int32 -5
+      | IllegalTargetProxy => Int32 -6
       end
     in
     { _exception: "Error"; code: result_code }
@@ -49,6 +51,8 @@ let serialize_tx_args =
 
 let uint128_zero = Uint128 0
 let zero_address = 0x0000000000000000000000000000000000000000
+(* it is unlock *)
+let unclock = let a = 0x756e6c6f636b in builtin to_bystr a
 
 (***************************************************)
 (*             The contract definition             *)
@@ -60,6 +64,8 @@ contract LockProxy(
 
 field contractadmin: ByStr20  = init_admin
 field asset_map: Map ByStr20 (Map Uint64 ByStr) = Emp ByStr20 (Map Uint64 ByStr)
+(* The LockProxy in other blockchains *)
+field proxy_hash_map: Map Uint64 ByStr = Emp Uint64 ByStr
 
 (* Procedures *)
 procedure ThrowError(err: Error)
@@ -95,7 +101,7 @@ end
 (* @param amount:   The amount of tokens to be crossed from ethereum to the chain with chainId  *)
 procedure transferZRC2ToContract(fromAssetHash: ByStr20, fromAddress: ByStr20, toAddress: ByStr20, amount: Uint128)
   msg_to_zrc2 = {_tag: "TransferFrom"; _recipient: fromAssetHash; _amount: uint128_zero; 
-  from: fromAddress; to: toAddress; amount: amount};
+                  from: fromAddress; to: toAddress; amount: amount};
   msgs = one_msg msg_to_zrc2;
   send msgs
 end
@@ -125,6 +131,14 @@ procedure TransferToContract(fromAssetHash: ByStr20, amount: Uint128)
   end
 end
 
+procedure CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr)
+  msg = {_tag: "CrossChain"; _recipient: init_manager_proxy; _amount: uint128_zero; 
+        toChainId: toChainId; toContract: toContract; method: method; txData: txData };
+  msgs = one_msg msg;
+  send msgs
+end
+
+
 (* This function is meant to be invoked by the user *)
 (* a certin amount teokens will be locked in the proxy contract the invoker/msg.sender immediately.*)
 (* Then the same amount of tokens will be unloked from target chain proxy contract at the target chain with chainId later. *)
@@ -142,8 +156,18 @@ transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amo
     match amount_256_o with
     | Some amount_256 =>
       txArgs = TxArgs toAssetHash toAddress amount_256;
-      e = { _eventname: "Lock" };
-      event e
+      tx_data = serialize_tx_args txArgs;
+      target_proxy_o <- proxy_hash_map[toChainId];
+      match target_proxy_o with
+      | Some target_proxy =>
+        CrossChain toChainId target_proxy unclock tx_data;
+        e = { _eventname: "Lock"; fromAssetHash: fromAssetHash; fromAddress: _sender; toChainId: toChainId; 
+            toAssetHash: toAssetHash; toAddress: toAddress; amount: amount };
+        event e
+      | None =>
+        e = IllegalTargetProxy;
+        ThrowError e
+      end
     | None =>
       e = IllegalToAmount;
       ThrowError e
@@ -158,6 +182,13 @@ transition BindAssetHash(fromAssetHash: ByStr20, toChainId: Uint64, toAssetHash:
   IsAdmin _sender;
   asset_map[fromAssetHash][toChainId] := toAssetHash;
   e = { _eventname: "BindAssetHash" };
+  event e
+end
+
+transition BindProxyHash(toChainId: Uint64, targetProxyHash: ByStr)
+  IsAdmin _sender;
+  proxy_hash_map[toChainId] := targetProxyHash;
+  e = { _eventname: "BindProxyHash" };
   event e
 end
 
