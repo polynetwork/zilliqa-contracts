@@ -49,6 +49,27 @@ let serialize_tx_args =
         amount
     end
 
+let deserialize_tx_args = 
+  fun (value: ByStr) =>
+    fun (nextpos: Uint32) =>
+      let to_asset_hash_o = extract_bystr value nextpos in
+        match to_asset_hash_o with
+        | Some (Pair to_asset_hash nextpos) =>
+          let to_address_o = extract_bystr value nextpos in
+            match to_address_o with
+            | Some (Pair to_address nextpos) =>
+               let amount_o = extract_uint256_le value nextpos in
+                 match amount_o with
+                 | Some (Pair amount nextpos) =>
+                   let tx_args = TxArgs to_asset_hash to_address amount in
+                   Some { TxArgs } tx_args
+                 | None => None { TxArgs }
+                 end
+            | None => None { TxArgs }
+            end 
+        | None => None { TxArgs }
+        end
+
 let uint128_zero = Uint128 0
 let zero_address = 0x0000000000000000000000000000000000000000
 (* it is unlock *)
