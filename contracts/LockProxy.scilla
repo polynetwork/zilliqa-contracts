@@ -5,6 +5,7 @@ library LockProxy
 type Error = 
   | AdminValidationFailed
   | AmountCannotBeZero
+  | LockAmountMismatch
 
 let make_error =
   fun (result: Error) =>
@@ -12,11 +13,19 @@ let make_error =
       match result with
       | AdminValidationFailed => Int32 -1
       | AmountCannotBeZero => Int32 -2
+      | LockAmountMismatch => Int32 -3
       end
     in
     { _exception: "Error"; code: result_code }
 
-let zero_amount = Uint256 0
+
+let one_msg =
+  fun (m : Message) =>
+    let e = Nil {Message} in
+      Cons {Message} m e
+
+let uint128_zero = Uint128 0
+let zero_address = 0x0000000000000000000000000000000000000000
 
 (***************************************************)
 (*             The contract definition             *)
@@ -47,8 +56,8 @@ procedure IsAdmin(initiator: ByStr20)
 end
 
 (* lock amount should not be zero *)
-procedure ValidateAmount(amount: Uint256)
-  is_zero = builtin eq amount zero_amount;
+procedure ValidateAmount(amount: Uint128)
+  is_zero = builtin eq amount uint128_zero;
   match is_zero with
   | True =>
     e =  AmountCannotBeZero;
@@ -57,14 +66,41 @@ procedure ValidateAmount(amount: Uint256)
   end
 end
 
-(* transfer asset from fromAddress to LockProxy contract *)
-procedure TransferToContract(fromAssetHash: ByStr20, amount: Uint256)
-(* statements go below *)
-  
+(* @param fromAssetHash: The asset address in current chain, uniformly named as `fromAssetHash` *)
+(* @param fromAddress: obtained by _sender *)
+(* @param toAddress: address is this contract: _this_address *)
+(* @param amount:   The amount of tokens to be crossed from ethereum to the chain with chainId  *)
+procedure transferZRC2ToContract(fromAssetHash: ByStr20, fromAddress: ByStr20, toAddress: ByStr20, amount: Uint128)
+  msg_to_zrc2 = {_tag: "TransferFrom"; _recipient: fromAssetHash; _amount: uint128_zero; 
+  from: fromAddress; to: toAddress; amount: amount};
+  msgs = one_msg msg_to_zrc2;
+  send msgs
 end
 
-
-
+(* transfer asset from fromAddress to LockProxy contract *)
+procedure TransferToContract(fromAssetHash: ByStr20, amount: Uint128)
+  (* if people choose to lock native zil, then fromAssetHash should be 0x0000000000000000000000000000000000000000 *)
+  is_asset_zil = builtin eq fromAssetHash zero_address;
+  match is_asset_zil with
+  | True =>
+    accept;
+    is_amount_correct = builtin eq _amount amount;
+    match is_amount_correct with
+    | True =>
+      e = { _eventname: "TransferToContract"; fromAssetHash: fromAssetHash; amount: amount };
+      event e
+    | False =>
+      e = LockAmountMismatch;
+      ThrowError e
+    end
+  | False =>
+    (* no accept here, so even some zils is transfered, there is no harm *)
+    (* see IncreaseAllowance in ZRC2 *)
+    transferZRC2ToContract fromAssetHash _sender _this_address amount;
+    e = { _eventname: "TransferToContract"; fromAssetHash: fromAssetHash; amount: amount };
+    event e
+  end
+end
 
 (* This function is meant to be invoked by the user *)
 (* a certin amount teokens will be locked in the proxy contract the invoker/msg.sender immediately.*)
@@ -73,8 +109,9 @@ end
 (* @param toChainId:  The target chain id *)
 (* @param toAddress:  The address in bytes format to receive same amount of tokens in target chain  *)
 (* @param amount:   The amount of tokens to be crossed from ethereum to the chain with chainId  *)
-transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr20, amount: Uint256)
+transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr20, amount: Uint128)
   ValidateAmount amount;
+  TransferToContract fromAssetHash amount;
   e = { _eventname: "Lock" };
   event e
 end
