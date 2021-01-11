@@ -2,10 +2,15 @@ scilla_version 0
 
 library LockProxy
 
+type TxArgs = 
+| TxArgs of ByStr ByStr Uint256
+
 type Error = 
   | AdminValidationFailed
   | AmountCannotBeZero
   | LockAmountMismatch
+  | IllegalToAssetHash
+  | IllegalToAmount
 
 let make_error =
   fun (result: Error) =>
@@ -14,6 +19,8 @@ let make_error =
       | AdminValidationFailed => Int32 -1
       | AmountCannotBeZero => Int32 -2
       | LockAmountMismatch => Int32 -3
+      | IllegalToAssetHash => Int32 -4
+      | IllegalToAmount => Int32 -5
       end
     in
     { _exception: "Error"; code: result_code }
@@ -109,10 +116,32 @@ end
 (* @param toChainId:  The target chain id *)
 (* @param toAddress:  The address in bytes format to receive same amount of tokens in target chain  *)
 (* @param amount:   The amount of tokens to be crossed from ethereum to the chain with chainId  *)
-transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr20, amount: Uint128)
+transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amount: Uint128)
   ValidateAmount amount;
   TransferToContract fromAssetHash amount;
-  e = { _eventname: "Lock" };
+  toAssetHash_o <- asset_map[fromAssetHash][toChainId];
+  match toAssetHash_o with
+  | Some toAssetHash =>
+    amount_256_o = builtin to_uint256 amount;
+    match amount_256_o with
+    | Some amount_256 =>
+      txArgs = TxArgs toAssetHash toAddress amount_256;
+      e = { _eventname: "Lock" };
+      event e
+    | None =>
+      e = IllegalToAmount;
+      ThrowError e
+    end
+  | None =>
+    e = IllegalToAssetHash;
+    ThrowError e
+  end
+end
+
+transition BindAssetHash(fromAssetHash: ByStr20, toChainId: Uint64, toAssetHash: ByStr)
+  IsAdmin _sender;
+  asset_map[fromAssetHash][toChainId] := toAssetHash;
+  e = { _eventname: "BindAssetHash" };
   event e
 end
 
