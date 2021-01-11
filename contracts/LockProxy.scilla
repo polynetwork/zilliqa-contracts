@@ -15,6 +15,10 @@ type Error =
   | IllegalToAssetHash
   | IllegalToAmount
   | IllegalTargetProxy
+  | ManagerValidationFailed
+  | IllegalFromProxy
+  | ParseToAssetAddressFailed
+  | ParseToAddressFailed
 
 let make_error =
   fun (result: Error) =>
@@ -26,6 +30,10 @@ let make_error =
       | IllegalToAssetHash => Int32 -4
       | IllegalToAmount => Int32 -5
       | IllegalTargetProxy => Int32 -6
+      | ManagerValidationFailed => Int32 -7
+      | IllegalFromProxy => Int32 -8
+      | ParseToAssetAddressFailed => Int32 -9
+      | ParseToAddressFailed => Int32 -10
       end
     in
     { _exception: "Error"; code: result_code }
@@ -71,7 +79,9 @@ let deserialize_tx_args =
         end
 
 let uint128_zero = Uint128 0
+let uint32_zero = Uint32 0
 let zero_address = 0x0000000000000000000000000000000000000000
+let zero_bystr = let a = 0x in builtin to_bystr a
 (* it is unlock *)
 let unclock = let a = 0x756e6c6f636b in builtin to_bystr a
 
@@ -80,7 +90,8 @@ let unclock = let a = 0x756e6c6f636b in builtin to_bystr a
 (***************************************************)
 contract LockProxy(
   init_admin: ByStr20,
-  init_manager_proxy: ByStr20
+  init_manager_proxy: ByStr20,
+  init_manager: ByStr20
 )
 
 field contractadmin: ByStr20  = init_admin
@@ -105,6 +116,16 @@ procedure IsAdmin(initiator: ByStr20)
   end
 end
 
+procedure IsManagerContract(initiator: ByStr20)
+  is_manager = builtin eq init_manager initiator;
+  match is_manager with
+  | True =>
+  | False =>
+    e = ManagerValidationFailed;
+    ThrowError e
+  end
+end
+
 (* lock amount should not be zero *)
 procedure ValidateAmount(amount: Uint128)
   is_zero = builtin eq amount uint128_zero;
@@ -113,6 +134,44 @@ procedure ValidateAmount(amount: Uint128)
     e =  AmountCannotBeZero;
     ThrowError e
   | False =>
+  end
+end
+
+procedure validateFromProxy(fromContractAddr: ByStr)
+  is_equal = builtin eq zero_bystr fromContractAddr;
+  match is_equal with
+  | True =>
+    e = IllegalFromProxy;
+    ThrowError e
+  | False =>
+  end
+end
+
+procedure ValidateToAssetHash(toAssetHash: ByStr)
+  is_equal = builtin eq zero_bystr toAssetHash;
+  match is_equal with
+  | True =>
+    e = IllegalToAssetHash;
+    ThrowError e
+  | False =>
+  end
+end
+
+procedure ValidateFromProxy(fromContractAddr: ByStr, fromChainId: Uint64)
+  validateFromProxy fromContractAddr;
+  targetAddr_o <- proxy_hash_map[fromChainId];
+  match targetAddr_o with
+  | Some targetAddr =>
+    is_equal = builtin eq targetAddr fromContractAddr;
+    match is_equal with
+    | True =>
+    | False =>
+      e = IllegalFromProxy;
+      ThrowError e
+    end
+  | None =>
+    e = IllegalTargetProxy;
+    ThrowError e
   end
 end
 
@@ -126,6 +185,14 @@ procedure transferZRC2ToContract(fromAssetHash: ByStr20, fromAddress: ByStr20, t
   msgs = one_msg msg_to_zrc2;
   send msgs
 end
+
+procedure TransferFromContract(toAssetHash: ByStr20, address: ByStr20, amount: Uint256)
+  (* handle amount, safe convert to Uint128 *)
+  (* transfer native zil or zrc2 *)
+  e = { _eventname: "transferFromContract" };
+  event e
+end
+
 
 (* transfer asset from fromAddress to LockProxy contract *)
 procedure TransferToContract(fromAssetHash: ByStr20, amount: Uint128)
@@ -196,6 +263,42 @@ transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amo
   | None =>
     e = IllegalToAssetHash;
     ThrowError e
+  end
+end
+
+(* This function is meant to be invoked by the Zilliqa crosschain management contract *)
+(* then mint a certin amount of tokens to the designated address since a certain amount *)
+(* was burnt from the source chain invoker. *)
+(* @param txData: The argument bytes recevied by the zilliqa lock proxy contract, need to be deserialized. *)
+(* based on the way of serialization in the source chain proxy contract. *)
+(* @param fromContractAddr: The source chain contract address. *)
+(* @param fromChainId: The source chain id. *)
+transition Unlock(txData: ByStr, fromContractAddr: ByStr, fromChainId: Uint64)
+  IsManagerContract _sender;
+  ValidateFromProxy fromContractAddr fromChainId;
+  tx_args_o = deserialize_tx_args txData uint32_zero;
+  match tx_args_o with
+  | Some (TxArgs toAssetHash toAddressHash amount) =>
+    ValidateToAssetHash toAssetHash;
+    toAssetAddress_o = builtin to_bystr20 toAssetHash;
+    toAddress_o = builtin to_bystr20 toAddressHash;
+    match toAssetAddress_o with
+    | Some toAssetAddress =>
+      match toAddress_o with
+      | Some toAddress =>
+        TransferFromContract toAssetAddress toAddress amount;
+        e = { _eventname: "Unlock" };
+        event e
+      | None =>
+        e = ParseToAddressFailed;
+        ThrowError e
+      end
+    | None =>
+      e = ParseToAssetAddressFailed;
+      ThrowError e
+    end
+   
+  | None =>
   end
 end
 
