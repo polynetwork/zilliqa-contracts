@@ -101,6 +101,8 @@ field contractadmin: ByStr20  = init_admin
 field asset_map: Map ByStr20 (Map Uint64 ByStr) = Emp ByStr20 (Map Uint64 ByStr)
 (* The LockProxy in other blockchains *)
 field proxy_hash_map: Map Uint64 ByStr = Emp Uint64 ByStr
+field manager: ByStr20 = init_manager
+field manager_proxy: ByStr20 = init_manager_proxy
 
 (* Procedures *)
 procedure ThrowError(err: Error)
@@ -120,7 +122,8 @@ procedure IsAdmin(initiator: ByStr20)
 end
 
 procedure IsManagerContract(initiator: ByStr20)
-  is_manager = builtin eq init_manager initiator;
+  manager_l <- manager;
+  is_manager = builtin eq manager_l initiator;
   match is_manager with
   | True =>
   | False =>
@@ -197,11 +200,12 @@ procedure transferZRC2FromContract(toAssetHash: ByStr20, address: ByStr20, amoun
 end
 
 procedure transferNativeZILFromContract(address: ByStr20, amount: Uint128)
-  msg = {_tag: ""; _recipient: address; _amount: amount };
+  msg = {_tag: "AddFunds"; _recipient: address; _amount: amount };
   msgs = one_msg msg;
   send msgs
 end
 
+(* transfer asset from LockProxy contract to address *)
 procedure TransferFromContract(toAssetHash: ByStr20, address: ByStr20, amount: Uint256)
   (* convert Uint256 amount to Uint128 amount, so it cannot be greater than uint128_max *)
   is_greater =  uint256_gt amount uint128_max;
@@ -213,7 +217,7 @@ procedure TransferFromContract(toAssetHash: ByStr20, address: ByStr20, amount: U
     uint128_amount_o = builtin to_uint128 amount;
     match uint128_amount_o with
     | Some uint128_amount =>
-      (* uf toAssetHash is zero address, then transfer native zil, otherwise, transfer zrc2 *)
+      (* if toAssetHash is zero address, then transfer native zil, otherwise, transfer zrc2 *)
       is_native_transfer = builtin eq toAssetHash zero_address;
       match is_native_transfer with
       | True =>
@@ -258,7 +262,8 @@ procedure TransferToContract(fromAssetHash: ByStr20, amount: Uint128)
 end
 
 procedure CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr)
-  msg = {_tag: "CrossChain"; _recipient: init_manager_proxy; _amount: uint128_zero; 
+  manager_proxy_l <- manager_proxy;
+  msg = {_tag: "CrossChain"; _recipient: manager_proxy_l; _amount: uint128_zero; 
         toChainId: toChainId; toContract: toContract; method: method; txData: txData };
   msgs = one_msg msg;
   send msgs
@@ -353,5 +358,17 @@ transition BindProxyHash(toChainId: Uint64, targetProxyHash: ByStr)
   e = { _eventname: "BindProxyHash" };
   event e
 end
+
+transition SetManager(new_manager: ByStr20)
+  IsAdmin _sender;
+  manager := new_manager
+end
+
+transition SetManagerProxy(new_manager_proxy: ByStr20)
+  IsAdmin _sender;
+  manager_proxy := new_manager_proxy
+end
+
+
 
 
