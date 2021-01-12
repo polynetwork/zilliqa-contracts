@@ -1,6 +1,6 @@
 scilla_version 0
 
-import Polynetwork IntUtils
+import Polynetwork IntUtils Conversions
 
 library LockProxy
 
@@ -47,6 +47,10 @@ let one_msg =
       Cons {Message} m e
 
 
+let big_endian = BigEndian
+let extract_uint256_be = extract_uint256 big_endian
+let append_uint256_be = append_uint256 big_endian
+
 let serialize_tx_args =
   fun (args: TxArgs) =>
     match args with
@@ -55,7 +59,7 @@ let serialize_tx_args =
       let empty_str = builtin to_bystr empty_str_0x in
       let to_asset_hash_str = append_varbytes empty_str toAssetHash in
       let to_address = append_varbytes to_asset_hash_str toAddress in
-      let amount = append_uint256_le to_address amount in
+      let amount = append_uint256_be to_address amount in
         amount
     end
 
@@ -68,7 +72,7 @@ let deserialize_tx_args =
           let to_address_o = extract_bystr value nextpos in
             match to_address_o with
             | Some (Pair to_address nextpos) =>
-               let amount_o = extract_uint256_le value nextpos in
+               let amount_o = extract_uint256_be value nextpos in
                  match amount_o with
                  | Some (Pair amount nextpos) =>
                    let tx_args = TxArgs to_asset_hash to_address amount in
