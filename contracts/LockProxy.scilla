@@ -1,6 +1,6 @@
 scilla_version 0
 
-import Polynetwork
+import Polynetwork IntUtils
 
 library LockProxy
 
@@ -19,6 +19,7 @@ type Error =
   | IllegalFromProxy
   | ParseToAssetAddressFailed
   | ParseToAddressFailed
+  | IllegalAmount
 
 let make_error =
   fun (result: Error) =>
@@ -34,6 +35,7 @@ let make_error =
       | IllegalFromProxy => Int32 -8
       | ParseToAssetAddressFailed => Int32 -9
       | ParseToAddressFailed => Int32 -10
+      | IllegalAmount => Int32 -11
       end
     in
     { _exception: "Error"; code: result_code }
@@ -84,6 +86,7 @@ let zero_address = 0x0000000000000000000000000000000000000000
 let zero_bystr = let a = 0x in builtin to_bystr a
 (* it is unlock *)
 let unclock = let a = 0x756e6c6f636b in builtin to_bystr a
+let uint128_max = Uint256 340282366920938463463374607431768211455
 
 (***************************************************)
 (*             The contract definition             *)
@@ -186,13 +189,48 @@ procedure transferZRC2ToContract(fromAssetHash: ByStr20, fromAddress: ByStr20, t
   send msgs
 end
 
-procedure TransferFromContract(toAssetHash: ByStr20, address: ByStr20, amount: Uint256)
-  (* handle amount, safe convert to Uint128 *)
-  (* transfer native zil or zrc2 *)
-  e = { _eventname: "transferFromContract" };
-  event e
+procedure transferZRC2FromContract(toAssetHash: ByStr20, address: ByStr20, amount: Uint128)
+  msg_to_zrc2 = {_tag: "Transfer"; _recipient: toAssetHash; _amount: uint128_zero; 
+                 to: address; amount: amount};
+  msgs = one_msg msg_to_zrc2;
+  send msgs
 end
 
+procedure transferNativeZILFromContract(address: ByStr20, amount: Uint128)
+  msg = {_tag: ""; _recipient: address; _amount: amount };
+  msgs = one_msg msg;
+  send msgs
+end
+
+procedure TransferFromContract(toAssetHash: ByStr20, address: ByStr20, amount: Uint256)
+  (* convert Uint256 amount to Uint128 amount, so it cannot be greater than uint128_max *)
+  is_greater =  uint256_gt amount uint128_max;
+  match is_greater with
+  | True =>
+    e = IllegalAmount;
+    ThrowError e
+  | False =>
+    uint128_amount_o = builtin to_uint128 amount;
+    match uint128_amount_o with
+    | Some uint128_amount =>
+      (* uf toAssetHash is zero address, then transfer native zil, otherwise, transfer zrc2 *)
+      is_native_transfer = builtin eq toAssetHash zero_address;
+      match is_native_transfer with
+      | True =>
+        transferNativeZILFromContract address uint128_amount;
+        e = { _eventname: "TransferFromContract"; toAssetHash: toAssetHash; address: address; amount: amount };
+        event e
+      | False =>
+        transferZRC2FromContract toAssetHash address uint128_amount;
+        e = { _eventname: "TransferFromContract"; toAssetHash: toAssetHash; address: address; amount: amount };
+        event e
+      end
+    | None =>
+      e = IllegalAmount;
+      ThrowError e
+    end
+  end
+end
 
 (* transfer asset from fromAddress to LockProxy contract *)
 procedure TransferToContract(fromAssetHash: ByStr20, amount: Uint128)
