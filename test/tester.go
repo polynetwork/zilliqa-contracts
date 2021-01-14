@@ -7,6 +7,7 @@ import (
 
 type Tester struct {
 	p *polynetwork.Proxy
+	l *polynetwork.LockProxy
 }
 
 func (t *Tester) InitGenesisBlock() {
