@@ -12,14 +12,15 @@ import (
 	"strconv"
 )
 
-const chainID = 222
+const chainID = 333
 const msgVersion = 1
 
 type Deployer struct {
-	PrivateKey string
-	Host       string
-	ProxyPath  string
-	ImplPath   string
+	PrivateKey    string
+	Host          string
+	ProxyPath     string
+	ImplPath      string
+	LockProxyPath string
 }
 
 func (d *Deployer) deploy(contractCode []byte, init []core.ContractValue, wallet *account.Wallet, client *provider.Provider, senderPubKey []byte, sendAddress string) (string, error) {
@@ -56,7 +57,7 @@ func (d *Deployer) deploy(contractCode []byte, init []core.ContractValue, wallet
 	}
 }
 
-func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (string, string, error) {
+func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (string, string, string, error) {
 	pubKey := keytools.GetPublicKeyFromPrivateKey(util.DecodeHex(d.PrivateKey), true)
 	address := keytools.GetAddressFromPublic(pubKey)
 
@@ -82,7 +83,7 @@ func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (st
 
 	proxy, err1 := d.deploy(code, init, wallet, client, pubKey, address)
 	if err1 != nil {
-		return "", "", err1
+		return "", "", "", err1
 	}
 
 	// deploy cross chain manager
@@ -112,8 +113,38 @@ func (d *Deployer) Deploy(wallet *account.Wallet, client *provider.Provider) (st
 
 	impl, err := d.deploy(code, init, wallet, client, pubKey, address)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return proxy, impl, nil
+	// deploy lock proxy
+	code, _ = ioutil.ReadFile(d.LockProxyPath)
+	init = []core.ContractValue{
+		{
+			"_scilla_version",
+			"Uint32",
+			"0",
+		},
+		{
+			"init_admin",
+			"ByStr20",
+			"0x" + address,
+		},
+		{
+			"init_manager_proxy",
+			"ByStr20",
+			"0x" + proxy,
+		},
+		{
+			"init_manager",
+			"ByStr20",
+			"0x" + impl,
+		},
+	}
+
+	lockProxy, err2 := d.deploy(code, init, wallet, client, pubKey, address)
+	if err2 != nil {
+		return "", "", "", err2
+	}
+
+	return proxy, impl, lockProxy, nil
 }

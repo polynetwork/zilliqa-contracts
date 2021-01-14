@@ -9,15 +9,17 @@ import (
 
 func main() {
 	deployer := &Deployer{
-		PrivateKey: "e887faa2e702daa055e59ff9f94d2af9ded1b308fc30935bbc1b63dabbfb8b11",
-		Host:       "http://54.213.251.102:5555",
-		ProxyPath:  "../contracts/ZilCrossChainManagerProxy.scilla",
-		ImplPath:   "../contracts/ZilCrossChainManager.scilla",
+		PrivateKey:    "e887faa2e702daa055e59ff9f94d2af9ded1b308fc30935bbc1b63dabbfb8b11",
+		Host:          "https://polynetworkcc3dcb2-5-api.dev.z7a.xyz",
+		ProxyPath:     "../contracts/ZilCrossChainManagerProxy.scilla",
+		ImplPath:      "../contracts/ZilCrossChainManager.scilla",
+		LockProxyPath: "../contracts/LockProxy.scilla",
 	}
 	wallet := account.NewWallet()
 	wallet.AddByPrivateKey(deployer.PrivateKey)
 	client := provider.NewProvider(deployer.Host)
-	proxy, impl, err := deployer.Deploy(wallet, client)
+	proxy, impl, lockProxy, err := deployer.Deploy(wallet, client)
+	log.Printf("lock proxy address: %s\n", lockProxy)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -27,8 +29,8 @@ func main() {
 		ImplAddr:   impl,
 		Wallet:     wallet,
 		Client:     client,
-		ChainId:    222,
-		MsgVersion: 1,
+		ChainId:    chainID,
+		MsgVersion: msgVersion,
 	}
 
 	_, err1 := p.UpgradeTo()
