@@ -371,12 +371,12 @@ transition CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txDat
   updateZilTxHash txHashIndex rawParamHash;
   (* todo: original caller *)
   e = { _eventname : "CrossChainEvent";
-       origin : _origin;
-       paramTxHash : paramTxHash;
-       sender : _sender;
+       sender : _origin;
+       txId : paramTxHash;
+       proxyOrAssetContract : _sender;
        toChainId : toChainId;
        toContract : toContract;
-       rawParam : rawParam };
+       rawdata : rawParam };
   event e
 end
 
