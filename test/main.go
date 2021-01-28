@@ -1,10 +1,11 @@
 package main
 
 import (
+	"log"
+
 	"github.com/Zilliqa/gozilliqa-sdk/account"
 	"github.com/Zilliqa/gozilliqa-sdk/crosschain/polynetwork"
 	"github.com/Zilliqa/gozilliqa-sdk/provider"
-	"log"
 )
 
 func main() {
@@ -51,24 +52,24 @@ func main() {
 		MsgVersion: msgVersion,
 	}
 
-	tester := &Tester{p: p, l:l}
+	tester := &Tester{p: p, l: l}
 	tester.InitGenesisBlock()
 	//tester.ChangeBookKeeper()
-	//tester.VerifierHeaderAndExecuteTx()
+	tester.VerifierHeaderAndExecuteTx()
 
 	// dummy ethereum contract address here
 	ethLockProxy := "0x74f5c8bfbcaa2b5042efe40597f1626fbb068eb6"
-	_,err3 := l.BindProxyHash("1",ethLockProxy)
+	_, err3 := l.BindProxyHash("1", ethLockProxy)
 	if err3 != nil {
 		log.Fatalln(err3.Error())
 	}
 
-	_,err4 := l.BindAssetHash("0x0000000000000000000000000000000000000000","1","0x0000000000000000000000000000000000000000")
+	_, err4 := l.BindAssetHash("0x0000000000000000000000000000000000000000", "1", "0x0000000000000000000000000000000000000000")
 	if err4 != nil {
 		log.Fatalln(err4.Error())
 	}
 
-	_,err5 := l.Lock("0x0000000000000000000000000000000000000000","1","0xd3573e0daa110b5498c54e93b66681fc0e0ff911","100")
+	_, err5 := l.Lock("0x0000000000000000000000000000000000000000", "1", "0xd3573e0daa110b5498c54e93b66681fc0e0ff911", "100")
 	if err5 != nil {
 		log.Fatalln(err5.Error())
 	}
