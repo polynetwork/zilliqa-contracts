@@ -1,2 +1,2 @@
-./bin/scilla-checker -gaslimit 10000 -libdir src/stdlib ../contracts/ZilCrossChainManager.scilla
-./bin/scilla-checker -gaslimit 10000 -libdir src/stdlib ../contracts/LockProxy.scilla.scilla
+./bin/scilla-checker -gaslimit 10000 -libdir src/stdlib ../zilliqa-contracts/contracts/ZilCrossChainManager.scilla
+./bin/scilla-checker -gaslimit 10000 -libdir src/stdlib ../zilliqa-contracts/contracts/LockProxy.scilla

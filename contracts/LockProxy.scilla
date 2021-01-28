@@ -20,6 +20,8 @@ type Error =
   | ParseToAssetAddressFailed
   | ParseToAddressFailed
   | IllegalAmount
+  | EmptyFromProxy
+  | FromProxyNotExist
 
 let make_error =
   fun (result: Error) =>
@@ -36,6 +38,8 @@ let make_error =
       | ParseToAssetAddressFailed => Int32 -9
       | ParseToAddressFailed => Int32 -10
       | IllegalAmount => Int32 -11
+      | EmptyFromProxy => Int32 -12
+      | FromProxyNotExist => Int32 -13
       end
     in
     { _exception: "Error"; code: result_code }
@@ -151,7 +155,7 @@ procedure validateFromProxy(fromContractAddr: ByStr)
   is_equal = builtin eq zero_bystr fromContractAddr;
   match is_equal with
   | True =>
-    e = IllegalFromProxy;
+    e = EmptyFromProxy;
     ThrowError e
   | False =>
   end
@@ -180,7 +184,7 @@ procedure ValidateFromProxy(fromContractAddr: ByStr, fromChainId: Uint64)
       ThrowError e
     end
   | None =>
-    e = IllegalTargetProxy;
+    e = FromProxyNotExist;
     ThrowError e
   end
 end
@@ -297,7 +301,7 @@ transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amo
       | Some target_proxy =>
         CrossChain toChainId target_proxy unclock tx_data;
         e = { _eventname: "Lock"; fromAssetHash: fromAssetHash; fromAddress: _sender; toChainId: toChainId; 
-            toAssetHash: toAssetHash; toAddress: toAddress; amount: amount };
+            toAssetHash: toAssetHash; toAddress: toAddress; amount: amount; tx_data: tx_data};
         event e
       | None =>
         e = IllegalTargetProxy;
@@ -333,9 +337,9 @@ transition Unlock(txData: ByStr, fromContractAddr: ByStr, fromChainId: Uint64)
     | Some toAssetAddress =>
       match toAddress_o with
       | Some toAddress =>
-        TransferFromContract toAssetAddress toAddress amount;
-        e = { _eventname: "Unlock" };
-        event e
+        e = { _eventname: "Unlock"; toAssetHash: toAssetAddress; toAddressHash: toAddress; amount: amount };
+        event e;
+        TransferFromContract toAssetAddress toAddress amount
       | None =>
         e = ParseToAddressFailed;
         ThrowError e
