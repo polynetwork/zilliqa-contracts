@@ -78,7 +78,7 @@ The table below presents the mutable fields of the contract and their initial va
 | `curEpochStartHeight` | `Uint32` |  `Uint32 0` | Current Epoch Start Height of Poly chain block. |
 | `zilToPolyTxHashMap` | `Map Uint256 ByStr32` |  `Emp Uint256 ByStr32` | A map records transactions from Zilliqa to Poly chain. |
 | `zilToPolyTxHashIndex` | `Uint256` |  `Uint256 0` | Record the length of aboving map. |
-| `fromChainTxExist` | `Map Uint64 (Map ByStr32 Unit)` |  Emp Uint64 (Map ByStr32 Unit)` |Record the from chain txs that have been processed. |
+| `fromChainTxExist` | `Map Uint64 (Map ByStr32 Unit)` |  `Emp Uint64 (Map ByStr32 Unit)` |Record the from chain txs that have been processed. |
 | `contractadmin` | `ByStr20` |  `init_admin` | Address of the administrator of this contract. |
 
 ## Transitions 
@@ -188,8 +188,36 @@ The table below describes the roles and privileges that this contract defines:
 | --------------- | ------------------------------------------------- |
 | `init_admin`           | The initial admin of the contract which is usually the creator of the contract. `init_admin` is also the initial value of admin. |
 | `admin`    | Current `admin` of the contract initialized to `init_admin`. Certain critical actions can only be performed by the `admin`. |
-| `init_manager_proxy` | The initial cross chain manager proxy of the contract. |
-| `init_manager` | The initial cross chain manager of the contract. |
+| `init_manager_proxy` | The initial cross chain manager proxy address. |
+| `init_manager` | The initial cross chain manager address. |
+
+## Immutable Parameters
+
+The table below lists the parameters that are defined at the contract deployment time and hence cannot be changed later on.
+
+| Name | Type | Description |
+|--|--|--|
+|`init_admin`| `ByStr20` | The address of the admin. |
+|`init_manager_proxy`| `ByStr20` | The initial cross chain manager proxy address. |
+|`init_manager`| `ByStr20` | The initial cross chain manager address. |
+
+## Mutable Fields
+
+The table below presents the mutable fields of the contract and their initial values.
+
+| Name | Type | Initial Value |Description |
+|--|--|--|--|
+|`contractadmin`| `ByStr20` | `init_owner` | Current `admin` of the contract. |
+|`manager`| `ByStr20` | `init_manager` | Address of the current `ZilCrossChainManager` contract. |
+|`manager_proxy`| `ByStr20` | `init_manager_proxy` | Address of the current `ZilCrossChainManagerProxy` contract. |
+
+## Transitions
+
+| Name | Params | Description |
+|--|--|--|
+|`Lock`| `fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amount: Uint128` | Invoked by the user, a certin amount teokens will be locked in the proxy contract the invoker/msg.sender immediately, then the same amount of tokens will be unloked from target chain proxy contract at the target chain with chainId later.|
+|`Unlock`| `txData: ByStr, fromContractAddr: ByStr, fromChainId: Uint64` | Invoked by the Zilliqa crosschain management contract, then mint a certin amount of tokens to the designated address since a certain amount was burnt from the source chain invoker.|
+
 
 # More on corss chain infrastructure
 
