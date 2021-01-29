@@ -6,6 +6,7 @@
 - [ZilCrossChainManager Contract Specification](#zilcrosschainmanager-contract-specification)
 - [ZilCrossChainManagerProxy Contract Specification](#zilcrosschainmanagerproxy-contract-specification)
 - [LockProxy Contract Specification](#lockproxy-contract-specification)
+- [More on cross chain infrastructure](#more-on-cross-chain-infrastructure)
 
 # Overview
 
