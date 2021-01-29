@@ -1,4 +1,4 @@
-# Zilliqa corss chain smart contract
+# Zilliqa cross chain smart contract
 
 # Table of Content
 
