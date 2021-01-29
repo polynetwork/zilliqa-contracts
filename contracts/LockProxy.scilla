@@ -189,7 +189,7 @@ procedure ValidateFromProxy(fromContractAddr: ByStr, fromChainId: Uint64)
   end
 end
 
-(* @param fromAssetHash: The asset address in current chain, uniformly named as `fromAssetHash` *)
+(* @param fromAssetHash: The asset address in current chain, uniformly named as fromAssetHash *)
 (* @param fromAddress: obtained by _sender *)
 (* @param toAddress: address is this contract: _this_address *)
 (* @param amount:   The amount of tokens to be crossed from ethereum to the chain with chainId  *)
