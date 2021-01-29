@@ -381,7 +381,7 @@ transition CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txDat
 end
 
 (* @dev:  Verify Poly chain header and proof, execute the cross chain tx                       *)
-(*        from Poly chain to Ethereum.                                                         *)
+(*        from Poly chain to Zilliqa.                                                         *)
 (* @param proof: Poly chain tx merkle proof.                                                   *)
 (* @param rawHeader: The header containing crossStateRoot to verify the above tx merkle proof. *)
 (* @param headerProof:   The header merkle proof used to verify rawHeader                      *)
