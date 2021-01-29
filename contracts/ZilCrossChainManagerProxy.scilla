@@ -118,28 +118,28 @@ end
 
 transition InitGenesisBlock(rawHeader: ByStr, pubkeys: List Pubkey)
   current_impl <- crosschain_manager;
-  msg = {_tag: "InitGenesisBlock"; _recipient: current_impl; _amount: zero; rawHeader: rawHeader; pubkeys: pubkeys; initiator: _sender};
+  msg = {_tag: "InitGenesisBlock"; _recipient: current_impl; _amount: zero; rawHeader: rawHeader; pubkeys: pubkeys};
   msgs = one_msg msg;
   send msgs
 end
 
 transition ChangeBookKeeper(rawHeader: ByStr, pubkeys: List Pubkey, sigList: List Signature)
   current_impl <- crosschain_manager;
-  msg = {_tag: "ChangeBookKeeper"; _recipient: current_impl; _amount: zero; rawHeader: rawHeader; pubkeys: pubkeys; sigList: sigList; initiator: _sender};
+  msg = {_tag: "ChangeBookKeeper"; _recipient: current_impl; _amount: zero; rawHeader: rawHeader; pubkeys: pubkeys; sigList: sigList};
   msgs = one_msg msg;
   send msgs
 end
 
 transition CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr)
   current_impl <- crosschain_manager;
-  msg = {_tag: "CrossChain"; _recipient: current_impl; _amount: zero; toChainId: toChainId; toContract: toContract; method: method; txData: txData; initiator: _sender};
+  msg = {_tag: "CrossChain"; _recipient: current_impl; _amount: zero; toChainId: toChainId; toContract: toContract; method: method; txData: txData};
   msgs = one_msg msg;
   send msgs
 end
 
 transition VerifyHeaderAndExecuteTx(proof: Proof, rawHeader: ByStr, headerProof: Proof, curRawHeader: ByStr, headerSig: List Signature)
   current_impl <- crosschain_manager;
-  msg = {_tag: "VerifyHeaderAndExecuteTx"; _recipient: current_impl; _amount: zero; proof: proof; rawHeader: rawHeader; headerProof: headerProof; curRawHeader: curRawHeader; headerSig: headerSig; initiator: _sender};
+  msg = {_tag: "VerifyHeaderAndExecuteTx"; _recipient: current_impl; _amount: zero; proof: proof; rawHeader: rawHeader; headerProof: headerProof; curRawHeader: curRawHeader; headerSig: headerSig};
   msgs = one_msg msg;
   send msgs
 end

@@ -112,7 +112,82 @@ All the transitions in the contract can be categorized into three categories:
 
 # ZilCrossChainManagerProxy Contract Specification
 
+`ZilCrossChainManagerProxy` contract is a relay contract that redirects calls to it to the `ZilCrossChainManager` contract.
+
+## Roles and Privileges
+
+The table below describes the roles and privileges that this contract defines:
+
+| Role | Description & Privileges|                                    
+| --------------- | ------------------------------------------------- |
+| `init_admin`           | The initial admin of the contract which is usually the creator of the contract. `init_admin` is also the initial value of admin. |
+| `admin`    | Current `admin` of the contract initialized to `init_admin`. Certain critical actions can only be performed by the `admin`, e.g., changing the current implementation of the `ZilCrossChainManager` contract. |
+|`initiator` | The user who calls the `ZilCrossChainManagerProxy` contract that in turn calls the `ZilCrossChainManager` contract. |
+
+
+## Immutable Parameters
+
+The table below lists the parameters that are defined at the contract deployment time and hence cannot be changed later on.
+
+| Name | Type | Description |
+|--|--|--|
+|`init_crosschain_manager`| `ByStr20` | The address of the `ZilCrossChainManager` contract. |
+|`init_admin`| `ByStr20` | The address of the admin. |
+
+## Mutable Fields
+
+The table below presents the mutable fields of the contract and their initial values.
+
+| Name | Type | Initial Value |Description |
+|--|--|--|--|
+|`crosschain_manager`| `ByStr20` | `init_crosschain_manager` | Address of the current implementation of the `ZilCrossChainManager` contract. |
+|`admin`| `ByStr20` | `init_owner` | Current `admin` of the contract. |
+
+## Transitions
+
+All the transitions in the contract can be categorized into two categories:
+- **Housekeeping Transitions** meant to facilitate basic admin related tasks.
+- **Relay Transitions** to redirect calls to the `ZilCrossChainManager` contract.
+
+### Housekeeping Transitions
+
+| Name | Params | Description |
+|--|--|--|
+|`UpgradeTo`| `new_crosschain_manager : ByStr20` |  Change the current implementation address of the `ZilCrossChainManager` contract. <br> :warning: **Note:** Only the `admin` can invoke this transition|
+|`ChangeProxyAdmin`| `newAdmin : ByStr20` |  Change the current `stagingadmin` of the contract. <br> :warning: **Note:** Only the `admin` can invoke this transition.|
+|`ClaimProxyAdmin` | `` |  Change the current `admin` of the contract. <br> :warning: **Note:** Only the `stagingadmin` can invoke this transition.|
+
+### Relay Transitions
+
+These transitions are meant to redirect calls to the corresponding `ZilCrossChainManager`
+contract. While redirecting, the contract may prepare the `initiator` value that
+is the address of the caller of the `ZilCrossChainManagerProxy` contract. The signature of
+transitions in the two contracts is exactly the same expect the added last
+parameter `initiator` for the `ZilCrossChainManager` contract.
+
+| Transition signature in the `ZilCrossChainManagerProxy` contract  | Target transition in the `ZilCrossChainManager` contract |
+|--|--|
+|`Pause()` | `Pause(initiator : ByStr20)` |
+|`UnPause()` | `UnPause(initiator : ByStr20)` |
+|`UpdateAdmin(newAdmin: ByStr20)` | `UpdateAdmin(admin: ByStr20, initiator : ByStr20)`|
+|`ClaimAdmin()` | `ClaimAdmin(initiator : ByStr20)`|
+|`InitGenesisBlock(rawHeader: ByStr, pubkeys: List Pubkey)` | `InitGenesisBlock(rawHeader: ByStr, pubkeys: List Pubkey)`|
+|`ChangeBookKeeper(rawHeader: ByStr, pubkeys: List Pubkey, sigList: List Signature)` | `ChangeBookKeeper(rawHeader: ByStr, pubkeys: List Pubkey, sigList: List Signature)`|
+| `CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr)` | ` CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr)`|
+| `VerifyHeaderAndExecuteTx(proof: Proof, rawHeader: ByStr, headerProof: Proof, curRawHeader: ByStr, headerSig: List Signature)` | `VerifyHeaderAndExecuteTx(proof: Proof, rawHeader: ByStr, headerProof: Proof, curRawHeader: ByStr, headerSig: List Signature)`|
+
 # LockProxy Contract Specification
+
+`LockProxy` is a contrac that allows people to lock ZRC2 tokens and native zils to get corresponding tokens in target chain (e.g. ERC20 in ethereum) and vise versa.
+
+## Roles and Privileges
+
+The table below describes the roles and privileges that this contract defines:
+
+| Role | Description & Privileges|                                    
+| --------------- | ------------------------------------------------- |
+| `init_admin`           | The initial admin of the contract which is usually the creator of the contract. `init_admin` is also the initial value of admin. |
+| `admin`    | Current `admin` of the contract initialized to `init_admin`. Certain critical actions can only be performed by the `admin`. |
 
 # More on corss chain infrastructure
 
