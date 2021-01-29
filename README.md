@@ -77,12 +77,38 @@ The table below presents the mutable fields of the contract and their initial va
 | `conKeepersPublicKeyList` | `List ByStr20` |  `Nil {ByStr20}` | List of public key of consensus book Keepers. |
 | `curEpochStartHeight` | `Uint32` |  `Uint32 0` | Current Epoch Start Height of Poly chain block. |
 | `zilToPolyTxHashMap` | `Map Uint256 ByStr32` |  `Emp Uint256 ByStr32` | A map records transactions from Zilliqa to Poly chain. |
-| `zilToPolyTxHashIndex` | Uint256` |  `Uint256 0` | Record the length of aboving map. |
-| `fromChainTxExist` | Map Uint64 (Map ByStr32 Unit)` |  Emp Uint64 (Map ByStr32 Unit)` |Record the from chain txs that have been processed. |
+| `zilToPolyTxHashIndex` | `Uint256` |  `Uint256 0` | Record the length of aboving map. |
+| `fromChainTxExist` | `Map Uint64 (Map ByStr32 Unit)` |  Emp Uint64 (Map ByStr32 Unit)` |Record the from chain txs that have been processed. |
 | `contractadmin` | `ByStr20` |  `init_admin` | Address of the administrator of this contract. |
 
+## Transitions 
 
+Note that some of the transitions in the `ZilCrossChainManager` contract takes `initiator` as a parameter which as explained above is the caller that calls the `ZilCrossChainManagerProxy` contract which in turn calls the `ZilCrossChainManager` contract. 
 
+> Note: No transition in the `ZilCrossChainManager` contract can be invoked directly. Any call to the `ZilCrossChainManager` contract must come from the `ZilCrossChainManagerProxy` contract.
+
+All the transitions in the contract can be categorized into three categories:
+
+* **Housekeeping Transitions:** Meant to facilitate basic admin-related tasks.
+* **Crosschain Transitions:** The transitions that related to cross chain tasks.
+
+### Housekeeping Transitions
+
+| Name        | Params     | Description | Callable when paused? | Callable when not paused? | 
+| ----------- | -----------|-------------|:--------------------------:|:--------------------------:|
+| `Pause` | `initiator: ByStr20`| Pause the contract temporarily to stop any critical transition from being invoked. <br>  :warning: **Note:** `initiator` must be the current `contractadmin` of the contract.  | :heavy_check_mark: | :heavy_check_mark: |
+| `Unpause` | `initiator: ByStr20`| Un-pause the contract to re-allow the invocation of all transitions. <br>  :warning: **Note:** `initiator` must be the current `contractadmin` of the contract.  | :heavy_check_mark: | :heavy_check_mark: |
+| `UpdateAdmin` | `newAdmin: ByStr20, initiator: ByStr20` | Set a new `stagingcontractadmin` by `newAdmin`. <br>  :warning: **Note:** `initiator` must be the current `contractadmin` of the contract.| :heavy_check_mark: | :heavy_check_mark: |
+| `ClaimAdmin` | ` initiator: ByStr20` | Claim to be new `contract admin`. <br>  :warning: **Note:** `initiator` must be the current `stagingcontractadmin` of the contract.| :heavy_check_mark: | :heavy_check_mark: 
+
+### Crosschain Transitions
+
+| Name        | Params     | Description | Callable when paused? | Callable when not paused? | 
+| ----------- | -----------|-------------|:--------------------------:|:--------------------------:|
+| `InitGenesisBlock` | `rawHeader: ByStr, pubkeys: List Pubkey`| Sync Poly chain genesis block header to smart contrat. | <center>:x:</center> | :heavy_check_mark: |
+| `ChangeBookKeeper` | `rawHeader: ByStr, pubkeys: List Pubkey, sigList: List Signature`| Change Poly chain consensus book keeper. | <center>:x:</center> | :heavy_check_mark: |
+| `CrossChain` | `toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr`| ZRC2 token cross chain to other blockchain. this function push tx event to blockchain. | <center>:x:</center> | :heavy_check_mark: |
+| `VerifyHeaderAndExecuteTx` | `proof: Proof, rawHeader: ByStr, headerProof: Proof, curRawHeader: ByStr, headerSig: List Signature`| Verify Poly chain header and proof, execute the cross chain tx  from Poly chain to Zilliqa. | <center>:x:</center> | :heavy_check_mark: |
 
 # ZilCrossChainManagerProxy Contract Specification
 

@@ -300,9 +300,8 @@ transition InitGenesisBlock(rawHeader: ByStr, pubkeys: List Pubkey)
   end
 end
 
-(* @dev: sync Poly chain genesis block header to smart contrat. *)
-(* @param rawHeader: Poly chain genesis block raw header or raw *)
-(*        Header including switching consensus peers info.      *)
+(* @dev:  change Poly chain consensus book keeper. *)
+(* @param rawHeader: Poly chain change book keeper block raw header *)
 (* @param pubkeys:  Poly chain consensus nodes public key list. *)
 (* @param sigList:  Poly chain consensus nodes signature list.  *)
 transition ChangeBookKeeper(rawHeader: ByStr, pubkeys: List Pubkey, sigList: List Signature)
