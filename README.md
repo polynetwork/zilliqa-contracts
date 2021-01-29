@@ -178,7 +178,7 @@ parameter `initiator` for the `ZilCrossChainManager` contract.
 
 # LockProxy Contract Specification
 
-`LockProxy` is a contrac that allows people to lock ZRC2 tokens and native zils to get corresponding tokens in target chain (e.g. ERC20 in ethereum) and vise versa.
+`LockProxy` is a contract that allows people to lock ZRC2 tokens and native zils to get corresponding tokens in target chain (e.g. ERC20 in ethereum) and vise versa.
 
 ## Roles and Privileges
 
@@ -188,6 +188,8 @@ The table below describes the roles and privileges that this contract defines:
 | --------------- | ------------------------------------------------- |
 | `init_admin`           | The initial admin of the contract which is usually the creator of the contract. `init_admin` is also the initial value of admin. |
 | `admin`    | Current `admin` of the contract initialized to `init_admin`. Certain critical actions can only be performed by the `admin`. |
+| `init_manager_proxy` | The initial cross chain manager proxy of the contract. |
+| `init_manager` | The initial cross chain manager of the contract. |
 
 # More on corss chain infrastructure
 
