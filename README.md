@@ -219,7 +219,7 @@ The table below presents the mutable fields of the contract and their initial va
 |`Unlock`| `txData: ByStr, fromContractAddr: ByStr, fromChainId: Uint64` | Invoked by the Zilliqa crosschain management contract, then mint a certin amount of tokens to the designated address since a certain amount was burnt from the source chain invoker.|
 
 
-# More on corss chain infrastructure
+# More on cross chain infrastructure
 
 - [polynetwork](https://github.com/polynetwork/poly)
 - [zilliqa-relayer](https://github.com/Zilliqa/zilliqa-relayer)
