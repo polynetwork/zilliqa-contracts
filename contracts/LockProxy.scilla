@@ -172,6 +172,8 @@ procedure ValidateToAssetHash(toAssetHash: ByStr)
 end
 
 procedure ValidateFromProxy(fromContractAddr: ByStr, fromChainId: Uint64)
+  e = { _eventname: "ValidateFromProxy"; fromContractAddr: fromContractAddr; fromChainId: fromChainId };
+  event e;
   validateFromProxy fromContractAddr;
   targetAddr_o <- proxy_hash_map[fromChainId];
   match targetAddr_o with
@@ -320,17 +322,17 @@ end
 (* This function is meant to be invoked by the Zilliqa crosschain management contract *)
 (* then mint a certin amount of tokens to the designated address since a certain amount *)
 (* was burnt from the source chain invoker. *)
-(* @param txData: The argument bytes recevied by the zilliqa lock proxy contract, need to be deserialized. *)
+(* @param args: The argument bytes recevied by the zilliqa lock proxy contract, need to be deserialized. *)
 (* based on the way of serialization in the source chain proxy contract. *)
 (* @param fromContractAddr: The source chain contract address. *)
 (* @param fromChainId: The source chain id. *)
-transition Unlock(txData: ByStr, fromContractAddr: ByStr, fromChainId: Uint64)
+transition unlock(args: ByStr, fromContractAddr: ByStr, fromChainId: Uint64)
   IsManagerContract _sender;
   ValidateFromProxy fromContractAddr fromChainId;
-  tx_args_o = deserialize_tx_args txData uint32_zero;
+  tx_args_o = deserialize_tx_args args uint32_zero;
   match tx_args_o with
   | Some (TxArgs toAssetHash toAddressHash amount) =>
-    ValidateToAssetHash toAssetHash;
+    (* ValidateToAssetHash toAssetHash; *)
     toAssetAddress_o = builtin to_bystr20 toAssetHash;
     toAddress_o = builtin to_bystr20 toAddressHash;
     match toAssetAddress_o with
@@ -376,7 +378,3 @@ transition SetManagerProxy(new_manager_proxy: ByStr20)
   IsAdmin _sender;
   manager_proxy := new_manager_proxy
 end
-
-
-
-

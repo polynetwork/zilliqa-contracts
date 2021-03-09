@@ -351,7 +351,7 @@ end
 (* @param toContract: Target smart contract address in target block chain.           *)
 (* @param method:  Method to call target smart contract                              *)
 (* @param txData: Transaction data for target chain, include to_address, amount.     *)
-transition CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr)
+transition CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txData: ByStr, originContractAddr: ByStr20)
   IsProxy;
   IsNotPaused;
   txHashIndex <- zilToPolyTxHashIndex;
@@ -361,7 +361,7 @@ transition CrossChain(toChainId: Uint64, toContract: ByStr, method: ByStr, txDat
     let s = builtin concat this_bs paramTxHash in
     let h = builtin sha256hash s in
     builtin to_bystr h;
-  fromContract = builtin to_bystr _sender;
+  fromContract = builtin to_bystr originContractAddr;
   txp = TxParam paramTxHash crossChainId fromContract toChainId toContract method txData;
   (* Serialize the TxParam object *)
   empty_bystr = let b = 0x in builtin to_bystr b;
