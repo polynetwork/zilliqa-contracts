@@ -287,7 +287,7 @@ end
 (* @param toChainId:  The target chain id *)
 (* @param toAddress:  The address in bytes format to receive same amount of tokens in target chain  *)
 (* @param amount:   The amount of tokens to be crossed from ethereum to the chain with chainId  *)
-transition Lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amount: Uint128)
+transition lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amount: Uint128)
   ValidateAmount amount;
   TransferToContract fromAssetHash amount;
   toAssetHash_o <- asset_map[fromAssetHash][toChainId];
