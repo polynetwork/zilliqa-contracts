@@ -216,7 +216,7 @@ The table below presents the mutable fields of the contract and their initial va
 
 | Name | Params | Description |
 |--|--|--|
-|`Lock`| `fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amount: Uint128` | Invoked by the user, a certin amount teokens will be locked in the proxy contract the invoker/msg.sender immediately, then the same amount of tokens will be unloked from target chain proxy contract at the target chain with chainId later.|
+|`Lock`| `fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amount: Uint128` | Invoked by the user, a certin amount tokens will be locked in the proxy contract the invoker/msg.sender immediately, then the same amount of tokens will be unloked from target chain proxy contract at the target chain with chainId later.|
 |`Unlock`| `txData: ByStr, fromContractAddr: ByStr, fromChainId: Uint64` | Invoked by the Zilliqa crosschain management contract, then mint a certin amount of tokens to the designated address since a certain amount was burnt from the source chain invoker.|
 
 
