@@ -93,7 +93,7 @@ let uint32_zero = Uint32 0
 let zero_address = 0x0000000000000000000000000000000000000000
 let zero_bystr = let a = 0x in builtin to_bystr a
 (* it is unlock *)
-let unclock = let a = 0x756e6c6f636b in builtin to_bystr a
+let unlock = let a = 0x756e6c6f636b in builtin to_bystr a
 let uint128_max = Uint256 340282366920938463463374607431768211455
 
 (***************************************************)
@@ -301,7 +301,7 @@ transition lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amo
       target_proxy_o <- proxy_hash_map[toChainId];
       match target_proxy_o with
       | Some target_proxy =>
-        CrossChain toChainId target_proxy unclock tx_data;
+        CrossChain toChainId target_proxy unlock tx_data;
         e = { _eventname: "Lock"; fromAssetHash: fromAssetHash; fromAddress: _sender; toChainId: toChainId; 
             toAssetHash: toAssetHash; toAddress: toAddress; amount: amount; tx_data: tx_data};
         event e
