@@ -1,3 +1,13 @@
+scilla_version 0
+
+import Polynetwork IntUtils Conversions
+
+library LockProxy
+
+(* toAssetHash, toAddress, amount *)
+type TxArgs = 
+| TxArgs of ByStr ByStr Uint256
+
 type Error = 
   | AdminValidationFailed
   | AmountCannotBeZero
