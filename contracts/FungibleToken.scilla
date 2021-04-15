@@ -155,7 +155,14 @@ end
 transition Transfer(to: ByStr20, amount: Uint128)
   AuthorizedMoveIfSufficientBalance _sender to amount;
   e = {_eventname : "TransferSuccess"; sender : _sender; recipient : to; amount : amount};
-  event e
+  event e;
+  (* Prevent sending to a contract address that does not support transfers of token *)
+  msg_to_recipient = {_tag : "RecipientAcceptTransfer"; _recipient : to; _amount : zero; 
+                      sender : _sender; recipient : to; amount : amount};
+  msg_to_sender = {_tag : "TransferSuccessCallBack"; _recipient : _sender; _amount : zero; 
+                  sender : _sender; recipient : to; amount : amount};
+  msgs = two_msgs msg_to_recipient msg_to_sender;
+  send msgs
 end
 
 (* @dev: Move a given amount of tokens from one address to another using the allowance mechanism. The caller must be an approved_spender. *)
@@ -173,7 +180,14 @@ transition TransferFrom(from: ByStr20, to: ByStr20, amount: Uint128)
     e = {_eventname : "TransferFromSuccess"; initiator : _sender; sender : from; recipient : to; amount : amount};
     event e;
     new_allowed = builtin sub allowed amount;
-    allowances[from][_sender] := new_allowed
+    allowances[from][_sender] := new_allowed;
+    (* Prevent sending to a contract address that does not support transfers of token *)
+    msg_to_recipient = {_tag: "RecipientAcceptTransferFrom"; _recipient : to; _amount: zero; 
+                        initiator: _sender; sender : from; recipient: to; amount: amount};
+    msg_to_sender = {_tag: "TransferFromSuccessCallBack"; _recipient: _sender; _amount: zero; 
+                    initiator: _sender; sender: from; recipient: to; amount: amount};
+    msgs = two_msgs msg_to_recipient msg_to_sender;
+    send msgs
   | False =>
     err = CodeInsufficientAllowance;
     ThrowError err
