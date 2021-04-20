@@ -50,11 +50,6 @@ let one_msg =
     let e = Nil {Message} in
       Cons {Message} m e
 
-
-let big_endian = BigEndian
-let extract_uint256_be = extract_uint256 big_endian
-let append_uint256_be = append_uint256 big_endian
-
 let serialize_tx_args =
   fun (args: TxArgs) =>
     match args with
@@ -63,7 +58,7 @@ let serialize_tx_args =
       let empty_str = builtin to_bystr empty_str_0x in
       let to_asset_hash_str = append_varbytes empty_str toAssetHash in
       let to_address = append_varbytes to_asset_hash_str toAddress in
-      let amount = append_uint256_be to_address amount in
+      let amount = append_uint256_le to_address amount in
         amount
     end
 
@@ -76,7 +71,7 @@ let deserialize_tx_args =
           let to_address_o = extract_bystr value nextpos in
             match to_address_o with
             | Some (Pair to_address nextpos) =>
-               let amount_o = extract_uint256_be value nextpos in
+               let amount_o = extract_uint256_le value nextpos in
                  match amount_o with
                  | Some (Pair amount nextpos) =>
                    let tx_args = TxArgs to_asset_hash to_address amount in
@@ -93,7 +88,7 @@ let uint32_zero = Uint32 0
 let zero_address = 0x0000000000000000000000000000000000000000
 let zero_bystr = let a = 0x in builtin to_bystr a
 (* it is unlock *)
-let unclock = let a = 0x756e6c6f636b in builtin to_bystr a
+let unlock = let a = 0x756e6c6f636b in builtin to_bystr a
 let uint128_max = Uint256 340282366920938463463374607431768211455
 
 (***************************************************)
@@ -301,7 +296,7 @@ transition lock(fromAssetHash: ByStr20, toChainId: Uint64, toAddress: ByStr, amo
       target_proxy_o <- proxy_hash_map[toChainId];
       match target_proxy_o with
       | Some target_proxy =>
-        CrossChain toChainId target_proxy unclock tx_data;
+        CrossChain toChainId target_proxy unlock tx_data;
         e = { _eventname: "Lock"; fromAssetHash: fromAssetHash; fromAddress: _sender; toChainId: toChainId; 
             toAssetHash: toAssetHash; toAddress: toAddress; amount: amount; tx_data: tx_data};
         event e
@@ -378,3 +373,17 @@ transition SetManagerProxy(new_manager_proxy: ByStr20)
   IsAdmin _sender;
   manager_proxy := new_manager_proxy
 end
+
+transition TransferSuccessCallBack(sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+transition RecipientAcceptTransfer(sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+transition RecipientAcceptTransferFrom(initiator: ByStr20, sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+transition TransferFromSuccessCallBack(initiator: ByStr20, sender: ByStr20, recipient: ByStr20, amount: Uint128)
+end
+
+
