@@ -1,0 +1,51 @@
+name: Typecheck contracts
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-18.04
+        ocaml-version:
+          - 4.08.1
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Try to restore opam cache
+        if: runner.os != 'Windows'
+        id: opam-cache
+        uses: actions/cache@v2
+        with:
+          path: "~/.opam"
+          key: ${{ matrix.os }}-${{ matrix.ocaml-version }}
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: boost
+        run: sudo apt-get update && sudo apt-get install -yq libboost-system-dev libboost-test-dev
+
+      - run: opam pin add scilla.dev git+https://github.com/Zilliqa/scilla\#master --no-action
+
+      - run: opam depext scilla --yes
+
+      - run: opam install --verbose scilla
+
+      - run: opam exec -- scilla-checker -gaslimit 10000 -libdir "$(opam var scilla:lib)/stdlib" contracts/LockProxy.scilla
+      - if: ${{ always() }}
+        run: opam exec -- scilla-checker -gaslimit 10000 -libdir "$(opam var scilla:lib)/stdlib" contracts/ZilCrossChainManager.scilla
+      - if: ${{ always() }}
+        run: opam exec -- scilla-checker -gaslimit 10000 -libdir "$(opam var scilla:lib)/stdlib" contracts/ZilCrossChainManagerProxy.scilla
+      - if: ${{ always() }}
+        run: opam exec -- scilla-checker -gaslimit 10000 -libdir "$(opam var scilla:lib)/stdlib" contracts/FungibleToken.scilla
